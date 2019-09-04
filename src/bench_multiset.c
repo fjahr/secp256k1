@@ -16,7 +16,6 @@ secp256k1_context *ctx;
 void bench_multiset(void* arg) {
     static int it=0;
     unsigned n,m;
-    unsigned char result[32];
     secp256k1_multiset multiset;
 
     UNUSED(arg);
@@ -33,8 +32,6 @@ void bench_multiset(void* arg) {
         secp256k1_multiset_add(ctx, &x, buf, sizeof(buf));
 
     }
-
-    secp256k1_multiset_finalize(ctx, result, &multiset);
 }
 
 void bench_multiset_setup(void* arg) {
@@ -45,7 +42,7 @@ int main(void) {
 
     ctx = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
 
-    run_benchmark("ecdsa_multiset", bench_multiset, bench_multiset_setup, NULL, NULL, 10, 20);
+    run_benchmark("ecdsa_multiset_add", bench_multiset, bench_multiset_setup, NULL, NULL, 10, 100000);
 
     secp256k1_context_destroy(ctx);
     return 0;
