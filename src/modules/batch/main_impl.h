@@ -190,6 +190,7 @@ int secp256k1_batch_verify(const secp256k1_context *ctx, secp256k1_batch *batch)
 
     if (batch->len > 0) {
         int strauss_ret = secp256k1_ecmult_strauss_batch_internal(&ctx->error_callback, batch->data, &resj, batch->scalars, batch->points, &batch->sc_g, batch->len);
+        (void)strauss_ret;
         int mid_res = secp256k1_gej_is_infinity(&resj);
 
         /* `_strauss_batch_internal` should not fail due to insufficient memory.

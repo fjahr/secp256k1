@@ -4880,7 +4880,7 @@ void ecmult_multi_random_generate_inp(secp256k1_gej *expected, secp256k1_scalar 
                     num_nonzero == 1 && !nonzero_result ? 1 :
                     (int)testrand_bits(1);
     /* Which g_scalar pointer to pass into ecmult_multi(). */
-    const secp256k1_scalar* g_scalar_ptr = (g_nonzero || testrand_bits(1)) ? &g_scalar : NULL;
+    secp256k1_scalar* g_scalar_ptr = (g_nonzero || testrand_bits(1)) ? g_scalar : NULL;
     /* How many EC multiplications were performed in this function. */
     int mults = 0;
     /* How many randomization steps to apply to the input list. */
@@ -4893,12 +4893,12 @@ void ecmult_multi_random_generate_inp(secp256k1_gej *expected, secp256k1_scalar 
 
     if (g_nonzero) {
         /* If g_nonzero, set g_scalar to nonzero value r. */
-        testutil_random_scalar_order_test(&g_scalar);
+        testutil_random_scalar_order_test(g_scalar);
         if (!nonzero_result) {
             /* If expected=0 is desired, add a (a*r, -(1/a)*g) term to compensate. */
             CHECK(num_nonzero > filled);
             testutil_random_scalar_order_test(&sc_tmp);
-            secp256k1_scalar_mul(&scalars[filled], &sc_tmp, &g_scalar);
+            secp256k1_scalar_mul(&scalars[filled], &sc_tmp, g_scalar);
             secp256k1_scalar_inverse_var(&sc_tmp, &sc_tmp);
             secp256k1_scalar_negate(&sc_tmp, &sc_tmp);
             secp256k1_ecmult_gen(&CTX->ecmult_gen_ctx, &gejs[filled], &sc_tmp);
@@ -5014,7 +5014,7 @@ int test_ecmult_multi_random(secp256k1_scratch *scratch) {
      * scalars[0..filled-1] and gejs[0..filled-1] are the scalars and points
      * which form its normal inputs. */
     int filled = 0;
-    secp256k1_scalar g_scalar = SECP256K1_SCALAR_CONST(0, 0, 0, 0, 0, 0, 0, 0);
+    secp256k1_scalar g_scalar = secp256k1_scalar_zero;
     secp256k1_scalar *g_scalar_ptr = &g_scalar;
     secp256k1_scalar scalars[128];
     secp256k1_gej gejs[128];
@@ -5028,7 +5028,7 @@ int test_ecmult_multi_random(secp256k1_scratch *scratch) {
     int g_nonzero, num_nonzero;
 
     /* Which multiplication function to use */
-    int fn = secp256k1_testrand_int(3);
+    int fn = testrand_int(3);
     secp256k1_ecmult_multi_func ecmult_multi = fn == 0 ? secp256k1_ecmult_multi_var :
                                                fn == 1 ? secp256k1_ecmult_strauss_batch_single :
                                                secp256k1_ecmult_pippenger_batch_single;
@@ -5068,19 +5068,19 @@ int test_ecmult_strauss_batch_internal_random(secp256k1_scratch *scratch) {
     int g_nonzero, num_nonzero;
     secp256k1_scalar *scratch_scalars;
     secp256k1_gej *scratch_points;
-    size_t checkpoint = secp256k1_scratch_checkpoint(&ctx->error_callback, scratch);
+    size_t checkpoint = secp256k1_scratch_checkpoint(&CTX->error_callback, scratch);
     int i;
 
     /* generate inputs and their ecmult_multi output */
     ecmult_multi_random_generate_inp(&expected, g_scalar_ptr, scalars, gejs, &filled, &num_nonzero, &g_nonzero, &mults);
 
     /* allocate inputs on the scratch space */
-    scratch_scalars = (secp256k1_scalar*)secp256k1_scratch_alloc(&ctx->error_callback, scratch, filled*sizeof(secp256k1_scalar));
-    scratch_points = (secp256k1_gej*)secp256k1_scratch_alloc(&ctx->error_callback, scratch, filled*sizeof(secp256k1_gej));
+    scratch_scalars = (secp256k1_scalar*)secp256k1_scratch_alloc(&CTX->error_callback, scratch, filled*sizeof(secp256k1_scalar));
+    scratch_points = (secp256k1_gej*)secp256k1_scratch_alloc(&CTX->error_callback, scratch, filled*sizeof(secp256k1_gej));
 
     /* If scalar or point allocation fails, restore scratch space to previous state */
     if (scratch_scalars == NULL || scratch_points == NULL) {
-        secp256k1_scratch_apply_checkpoint(&ctx->error_callback, scratch, checkpoint);
+        secp256k1_scratch_apply_checkpoint(&CTX->error_callback, scratch, checkpoint);
         return 0;
     }
 
@@ -5090,19 +5090,18 @@ int test_ecmult_strauss_batch_internal_random(secp256k1_scratch *scratch) {
         scratch_points[i] = gejs[i];
     }
 
-    CHECK(secp256k1_ecmult_strauss_batch_internal(&ctx->error_callback, scratch, &computed, scratch_scalars, scratch_points, g_scalar_ptr, filled));
+    CHECK(secp256k1_ecmult_strauss_batch_internal(&CTX->error_callback, scratch, &computed, scratch_scalars, scratch_points, g_scalar_ptr, filled));
     mults += num_nonzero + g_nonzero;
     /* Compare with expected result. */
     secp256k1_gej_neg(&computed, &computed);
     secp256k1_gej_add_var(&computed, &computed, &expected, NULL);
     CHECK(secp256k1_gej_is_infinity(&computed));
 
-    secp256k1_scratch_apply_checkpoint(&ctx->error_callback, scratch, checkpoint);
+    secp256k1_scratch_apply_checkpoint(&CTX->error_callback, scratch, checkpoint);
     return mults;
 }
 
 void test_ecmult_multi_batch_single(secp256k1_ecmult_multi_func ecmult_multi) {
-    secp256k1_scalar szero;
     secp256k1_scalar sc;
     secp256k1_ge pt;
     secp256k1_gej r;
@@ -5288,9 +5287,9 @@ static void test_ecmult_multi_batching(void) {
 
 static void run_ecmult_multi_tests(void) {
     secp256k1_scratch *scratch;
-    int64_t todo_multi = (int64_t)320 * count;
+    int64_t todo_multi = (int64_t)320 * COUNT;
     /* todo: what should be the intial val of `todo_strauss_internal` */
-    int64_t todo_strauss_internal = (int64_t)320 * count;
+    int64_t todo_strauss_internal = (int64_t)320 * COUNT;
 
     test_secp256k1_pippenger_bucket_window_inv();
     test_ecmult_multi_pippenger_max_points();

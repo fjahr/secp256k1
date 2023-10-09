@@ -38,6 +38,13 @@ void test_batch_sha256_tagged(void) {
 #define N_TWK_CHECKS 10
 #define N_TERMS (N_TWK_CHECKS + 2*N_SIGS)
 void test_batch_api(void) {
+    secp256k1_batch *batch_none;
+    secp256k1_batch *batch_sign;
+    secp256k1_batch *batch_vrfy;
+    secp256k1_batch *batch_both;
+    secp256k1_batch *batch_sttc;
+    unsigned char aux_rand16[32];
+    int ecount;
 
 #ifdef ENABLE_MODULE_EXTRAKEYS
     unsigned char sk[32];
@@ -62,39 +69,33 @@ void test_batch_api(void) {
     secp256k1_context *sign = secp256k1_context_create(SECP256K1_CONTEXT_SIGN);
     secp256k1_context *vrfy = secp256k1_context_create(SECP256K1_CONTEXT_VERIFY);
     secp256k1_context *both = secp256k1_context_create(SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY);
-    secp256k1_context *sttc = secp256k1_context_clone(secp256k1_context_no_precomp);
-    secp256k1_batch *batch_none;
-    secp256k1_batch *batch_sign;
-    secp256k1_batch *batch_vrfy;
-    secp256k1_batch *batch_both;
-    secp256k1_batch *batch_sttc;
-    unsigned char aux_rand16[32];
-    int ecount;
+    secp256k1_context *sttc = malloc(sizeof(*secp256k1_context_no_precomp));
+    memcpy(sttc, secp256k1_context_no_precomp, sizeof(secp256k1_context));
 
-    secp256k1_context_set_error_callback(none, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_error_callback(sign, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_error_callback(vrfy, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_error_callback(both, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_error_callback(sttc, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(none, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(sign, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(vrfy, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(both, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(sttc, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(none, counting_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(sign, counting_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(vrfy, counting_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(both, counting_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(sttc, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(none, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(sign, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(vrfy, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(both, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(sttc, counting_callback_fn, &ecount);
 
     /* 16 byte auxiliary randomness */
-    secp256k1_testrand256(aux_rand16);
+    testrand256(aux_rand16);
     memset(&aux_rand16[16], 0, 16);
 
 #ifdef ENABLE_MODULE_EXTRAKEYS
     /* generate keypair data */
-    secp256k1_testrand256(sk);
+    testrand256(sk);
     CHECK(secp256k1_keypair_create(sign, &keypair, sk) == 1);
     CHECK(secp256k1_keypair_xonly_pub(sign, &pk, NULL, &keypair) == 1);
 
     /* generate N_TWK_CHECKS tweak check data (tweaked_pk, tweaked_pk_parity, tweak) */
     for (i = 0; i < N_TWK_CHECKS; i++) {
-        secp256k1_testrand256(tweak[i]);
+        testrand256(tweak[i]);
         CHECK(secp256k1_xonly_pubkey_tweak_add(vrfy, &tmp_pk, &pk, tweak[i]));
         CHECK(secp256k1_xonly_pubkey_from_pubkey(vrfy, &tmp_xonly_pk, &tweaked_pk_parity[i], &tmp_pk));
         CHECK(secp256k1_xonly_pubkey_serialize(vrfy, tweaked_pk[i], &tmp_xonly_pk));
@@ -105,7 +106,7 @@ void test_batch_api(void) {
 #ifdef ENABLE_MODULE_SCHNORRSIG
     /* generate N_SIGS schnorr verify data (msg, sig) */
     for (i = 0; i < N_SIGS; i++) {
-        secp256k1_testrand256(msg[i]);
+        testrand256(msg[i]);
         CHECK(secp256k1_schnorrsig_sign32(sign, sig[i], msg[i], &keypair, NULL) == 1);
         CHECK(secp256k1_schnorrsig_verify(vrfy, sig[i], msg[i], sizeof(msg[i]), &pk));
     }
