@@ -12,7 +12,7 @@ void batch_xonlypub_tweak_randomizer_gen_bitflip(secp256k1_sha256 *sha, unsigned
     secp256k1_sha256 sha_cpy;
     sha_cpy = *sha;
     secp256k1_batch_xonlypub_tweak_randomizer_gen(randomizers[0], &sha_cpy, args[0], args[1], args[2], args[3]);
-    secp256k1_testrand_flip(args[n_flip], n_bytes);
+    testrand_flip(args[n_flip], n_bytes);
     sha_cpy = *sha;
     secp256k1_batch_xonlypub_tweak_randomizer_gen(randomizers[1], &sha_cpy, args[0], args[1], args[2], args[3]);
     CHECK(secp256k1_memcmp_var(randomizers[0], randomizers[1], 32) != 0);
@@ -35,11 +35,11 @@ void run_batch_xonlypub_tweak_randomizer_gen_tests(void) {
         uint8_t temp_rand;
 
         /* generate i-th tweak check data */
-        secp256k1_testrand256(tweaked_pk);
-        tweaked_pk_parity = (unsigned char) secp256k1_testrand_int(2);
-        secp256k1_testrand256(tweak);
-        secp256k1_testrand256(&internal_pk[1]);
-        temp_rand = secp256k1_testrand_int(2) + 2; /* randomly choose 2 or 3 */
+        testrand256(tweaked_pk);
+        tweaked_pk_parity = (unsigned char) testrand_int(2);
+        testrand256(tweak);
+        testrand256(&internal_pk[1]);
+        temp_rand = testrand_int(2) + 2; /* randomly choose 2 or 3 */
         internal_pk[0] = (unsigned char)temp_rand;
 
         /* check bitflip in any argument results in generates randomizers */
@@ -48,7 +48,7 @@ void run_batch_xonlypub_tweak_randomizer_gen_tests(void) {
         args[2] = internal_pk;
         args[3] = tweak;
 
-        for (j = 0; j < count; j++) {
+        for (j = 0; j < COUNT; j++) {
             batch_xonlypub_tweak_randomizer_gen_bitflip(&sha, args, 0, 32);
             batch_xonlypub_tweak_randomizer_gen_bitflip(&sha, args, 1, 1);
             batch_xonlypub_tweak_randomizer_gen_bitflip(&sha, args, 2, 33);
@@ -86,21 +86,21 @@ void test_batch_add_xonlypub_tweak_api(void) {
     secp256k1_batch *batch2 = secp256k1_batch_create(none, 1, NULL);
     int ecount;
 
-    secp256k1_context_set_error_callback(none, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_error_callback(sign, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_error_callback(vrfy, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(none, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(sign, counting_illegal_callback_fn, &ecount);
-    secp256k1_context_set_illegal_callback(vrfy, counting_illegal_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(none, counting_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(sign, counting_callback_fn, &ecount);
+    secp256k1_context_set_error_callback(vrfy, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(none, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(sign, counting_callback_fn, &ecount);
+    secp256k1_context_set_illegal_callback(vrfy, counting_callback_fn, &ecount);
 
     /** generate keypair data **/
-    secp256k1_testrand256(sk);
+    testrand256(sk);
     CHECK(secp256k1_keypair_create(sign, &keypair, sk) == 1);
     CHECK(secp256k1_keypair_xonly_pub(sign, &pk, NULL, &keypair) == 1);
     memset(overflows, 0xFF, sizeof(overflows));
 
     /** generate tweak check data (tweaked_pk, tweaked_pk_parity, tweak) **/
-    secp256k1_testrand256(tweak);
+    testrand256(tweak);
     CHECK(secp256k1_xonly_pubkey_tweak_add(vrfy, &tmp_pk, &pk, tweak));
     CHECK(secp256k1_xonly_pubkey_from_pubkey(vrfy, &tmp_xonly_pk, &tweaked_pk_parity, &tmp_pk));
     CHECK(secp256k1_xonly_pubkey_serialize(vrfy, tweaked_pk, &tmp_xonly_pk));
