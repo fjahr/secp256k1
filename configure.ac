@@ -197,6 +197,10 @@ AC_ARG_ENABLE(module_silentpayments,
     AS_HELP_STRING([--enable-module-silentpayments],[enable Silent Payments module [default=yes]]), [],
     [SECP_SET_DEFAULT([enable_module_silentpayments], [yes], [yes])])
 
+AC_ARG_ENABLE(module_batch,
+    AS_HELP_STRING([--enable-module-batch],[enable batch verification module (experimental) [default=no]]), [],
+    [SECP_SET_DEFAULT([enable_module_batch], [no], [yes])])
+
 AC_ARG_ENABLE(external_default_callbacks,
     AS_HELP_STRING([--enable-external-default-callbacks],[enable external default callback functions [default=no]]), [],
     [SECP_SET_DEFAULT([enable_external_default_callbacks], [no], [no])])
@@ -403,6 +407,10 @@ SECP_CFLAGS="$SECP_CFLAGS $WERROR_CFLAGS"
 
 # Processing must be done in a reverse topological sorting of the dependency graph
 # (dependent module first).
+if test x"$enable_module_batch" = x"yes"; then
+  SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_BATCH=1"
+fi
+
 if test x"$enable_module_silentpayments" = x"yes"; then
   if test x"$enable_module_extrakeys" = x"no"; then
     AC_MSG_ERROR([Module dependency error: You have disabled the extrakeys module explicitly, but it is required by the silentpayments module.])
@@ -455,6 +463,9 @@ if test x"$enable_experimental" = x"no"; then
   if test x"$set_asm" = x"arm32"; then
     AC_MSG_ERROR([ARM32 assembly is experimental. Use --enable-experimental to allow.])
   fi
+  if test x"$enable_module_batch" = x"yes"; then
+    AC_MSG_ERROR([batch verification module is experimental. Use --enable-experimental to allow.])
+  fi
 fi
 
 # Check for concurrency support (tests only)
@@ -485,6 +496,7 @@ AM_CONDITIONAL([ENABLE_MODULE_SCHNORRSIG], [test x"$enable_module_schnorrsig" = 
 AM_CONDITIONAL([ENABLE_MODULE_MUSIG], [test x"$enable_module_musig" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_ELLSWIFT], [test x"$enable_module_ellswift" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_SILENTPAYMENTS], [test x"$enable_module_silentpayments" = x"yes"])
+AM_CONDITIONAL([ENABLE_MODULE_BATCH], [test x"$enable_module_batch" = x"yes"])
 AM_CONDITIONAL([USE_EXTERNAL_ASM], [test x"$enable_external_asm" = x"yes"])
 AM_CONDITIONAL([USE_ASM_ARM], [test x"$set_asm" = x"arm32"])
 AM_CONDITIONAL([BUILD_WINDOWS], [test "$build_windows" = "yes"])
@@ -510,6 +522,7 @@ echo "  module schnorrsig       = $enable_module_schnorrsig"
 echo "  module musig            = $enable_module_musig"
 echo "  module ellswift         = $enable_module_ellswift"
 echo "  module silentpayments   = $enable_module_silentpayments"
+echo "  module batch            = $enable_module_batch"
 echo
 echo "  asm                     = $set_asm"
 echo "  ecmult window size      = $set_ecmult_window"
