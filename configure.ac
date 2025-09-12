@@ -193,6 +193,10 @@ AC_ARG_ENABLE(module_schnorrsig_halfagg,
     AS_HELP_STRING([--enable-module-schnorrsig-halfagg],[enable schnorrsig half-aggregation module (experimental) [default=no]]), [],
     [SECP_SET_DEFAULT([enable_module_schnorrsig_halfagg], [no], [yes])])
 
+AC_ARG_ENABLE(module_schnorrsig_fullagg,
+    AS_HELP_STRING([--enable-module-schnorrsig-fullagg],[enable schnorrsig full-aggregation module (experimental) [default=no]]), [],
+    [SECP_SET_DEFAULT([enable_module_schnorrsig_fullagg], [no], [yes])])
+
 AC_ARG_ENABLE(module_ellswift,
     AS_HELP_STRING([--enable-module-ellswift],[enable ElligatorSwift module [default=yes]]), [],
     [SECP_SET_DEFAULT([enable_module_ellswift], [yes], [yes])])
@@ -407,17 +411,24 @@ SECP_CFLAGS="$SECP_CFLAGS $WERROR_CFLAGS"
 
 # Processing must be done in a reverse topological sorting of the dependency graph
 # (dependent module first).
-<<<<<<< HEAD
 if test x"$enable_module_batch" = x"yes"; then
   SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_BATCH=1"
-=======
+fi
+
 if test x"$enable_module_schnorrsig_halfagg" = x"yes"; then
   if test x"$enable_module_schnorrsig" = x"no"; then
     AC_MSG_ERROR([Module dependency error: You have disabled the schnorrsig module explicitly, but it is required by the schnorrsig halfagg module.])
   fi
   enable_module_schnorrsig=yes
   SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_SCHNORRSIG_HALFAGG=1"
->>>>>>> ccc826d (Experimental: Add incremental half-aggregation for Schnorr signatures)
+fi
+
+if test x"$enable_module_schnorrsig_fullagg" = x"yes"; then
+  if test x"$enable_module_schnorrsig" = x"no"; then
+    AC_MSG_ERROR([Module dependency error: You have disabled the schnorrsig module explicitly, but it is required by the schnorrsig fullagg module.])
+  fi
+  enable_module_schnorrsig=yes
+  SECP_CONFIG_DEFINES="$SECP_CONFIG_DEFINES -DENABLE_MODULE_SCHNORRSIG_FULLAGG=1"
 fi
 
 if test x"$enable_module_ellswift" = x"yes"; then
@@ -467,6 +478,9 @@ if test x"$enable_experimental" = x"no"; then
   if test x"$enable_module_schnorrsig_halfagg" = x"yes"; then
     AC_MSG_ERROR([Schnorrsig Half-Aggregation module is experimental. Use --enable-experimental to allow.])
   fi
+  if test x"$enable_module_schnorrsig_fullagg" = x"yes"; then
+    AC_MSG_ERROR([Schnorrsig Full-Aggregation module is experimental. Use --enable-experimental to allow.])
+  fi
 fi
 
 # Check for concurrency support (tests only)
@@ -495,6 +509,7 @@ AM_CONDITIONAL([ENABLE_MODULE_RECOVERY], [test x"$enable_module_recovery" = x"ye
 AM_CONDITIONAL([ENABLE_MODULE_EXTRAKEYS], [test x"$enable_module_extrakeys" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_SCHNORRSIG], [test x"$enable_module_schnorrsig" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_SCHNORRSIG_HALFAGG], [test x"$enable_module_schnorrsig_halfagg" = x"yes"])
+AM_CONDITIONAL([ENABLE_MODULE_SCHNORRSIG_FULLAGG], [test x"$enable_module_schnorrsig_fullagg" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_MUSIG], [test x"$enable_module_musig" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_ELLSWIFT], [test x"$enable_module_ellswift" = x"yes"])
 AM_CONDITIONAL([ENABLE_MODULE_BATCH], [test x"$enable_module_batch" = x"yes"])
@@ -521,6 +536,7 @@ echo "  module recovery           = $enable_module_recovery"
 echo "  module extrakeys          = $enable_module_extrakeys"
 echo "  module schnorrsig         = $enable_module_schnorrsig"
 echo "  module schnorrsig-halfagg = $enable_module_schnorrsig_halfagg"
+echo "  module schnorrsig-fullagg = $enable_module_schnorrsig_fullagg"
 echo "  module musig              = $enable_module_musig"
 echo "  module ellswift           = $enable_module_ellswift"
 echo "  module batch              = $enable_module_batch"
