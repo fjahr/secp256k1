@@ -1011,24 +1011,39 @@ static void secp256k1_ge_from_bytes_ext(secp256k1_ge *ge, const unsigned char *d
     }
 }
 
-static int secp256k1_ge_parse(secp256k1_ge *elem, const unsigned char *pub, size_t size) {
-    if (size == 33 && (pub[0] == SECP256K1_TAG_PUBKEY_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_ODD)) {
-        secp256k1_fe x;
-        return secp256k1_fe_set_b32_limit(&x, pub+1) && secp256k1_ge_set_xo_var(elem, &x, pub[0] == SECP256K1_TAG_PUBKEY_ODD);
-    } else if (size == 65 && (pub[0] == SECP256K1_TAG_PUBKEY_UNCOMPRESSED || pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD)) {
+static int secp256k1_ge_parse33(secp256k1_ge *elem, const unsigned char *pub33) {
+    secp256k1_fe x;
+    if (pub33[0] != SECP256K1_TAG_PUBKEY_EVEN && pub33[0] != SECP256K1_TAG_PUBKEY_ODD) {
+        return 0;
+    }
+    return secp256k1_fe_set_b32_limit(&x, pub33+1) && secp256k1_ge_set_xo_var(elem, &x, pub33[0] == SECP256K1_TAG_PUBKEY_ODD);
+}
+
+static int secp256k1_ge_parse65(secp256k1_ge *elem, const unsigned char *pub65) {
+    secp256k1_fe x, y;
+    if (pub65[0] != SECP256K1_TAG_PUBKEY_UNCOMPRESSED) {
+        return 0;
+    }
+    if (!secp256k1_fe_set_b32_limit(&x, pub65+1) || !secp256k1_fe_set_b32_limit(&y, pub65+33)) {
+        return 0;
+    }
+    secp256k1_ge_set_xy(elem, &x, &y);
+    return secp256k1_ge_is_valid_var(elem);
+}
+
+static int secp256k1_ge_parse65_with_hybrid(secp256k1_ge *elem, const unsigned char *pub65) {
+    if (pub65[0] == SECP256K1_TAG_PUBKEY_HYBRID_EVEN || pub65[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD) {
         secp256k1_fe x, y;
-        if (!secp256k1_fe_set_b32_limit(&x, pub+1) || !secp256k1_fe_set_b32_limit(&y, pub+33)) {
+        if (!secp256k1_fe_set_b32_limit(&x, pub65+1) || !secp256k1_fe_set_b32_limit(&y, pub65+33)) {
             return 0;
         }
         secp256k1_ge_set_xy(elem, &x, &y);
-        if ((pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD) &&
-            secp256k1_fe_is_odd(&y) != (pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD)) {
+        if (secp256k1_fe_is_odd(&y) != (pub65[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD)) {
             return 0;
         }
         return secp256k1_ge_is_valid_var(elem);
-    } else {
-        return 0;
     }
+    return secp256k1_ge_parse65(elem, pub65);
 }
 
 static void secp256k1_ge_serialize33(secp256k1_ge *elem, unsigned char *pub33) {
@@ -1066,7 +1081,7 @@ static int secp256k1_ge_parse_ext33(secp256k1_ge *ge, const unsigned char *in33)
         secp256k1_ge_set_infinity(ge);
         return 1;
     }
-    if (!secp256k1_ge_parse(ge, in33, 33)) {
+    if (!secp256k1_ge_parse33(ge, in33)) {
         return 0;
     }
     return secp256k1_ge_is_in_correct_subgroup(ge);

@@ -196,8 +196,16 @@ static void secp256k1_ge_to_bytes_ext(unsigned char *data, const secp256k1_ge *g
  *  provided buffer is the output of secp256k1_ge_to_bytes_ext. */
 static void secp256k1_ge_from_bytes_ext(secp256k1_ge *ge, const unsigned char *data);
 
-/** Parse a group element from a 33-byte compressed or 65-byte uncompressed public key. */
-static int secp256k1_ge_parse(secp256k1_ge *elem, const unsigned char *pub, size_t size);
+/** Parse a group element from a 33-byte compressed public key. */
+static int secp256k1_ge_parse33(secp256k1_ge *elem, const unsigned char *pub33);
+
+/** Parse a group element from a 65-byte uncompressed public key. */
+static int secp256k1_ge_parse65(secp256k1_ge *elem, const unsigned char *pub65);
+
+/** Parse a group element from a 65-byte uncompressed or hybrid public key.
+ *  Hybrid encodings are only supported by secp256k1_ec_pubkey_parse for
+ *  legacy reasons. All other callers should use secp256k1_ge_parse65. */
+static int secp256k1_ge_parse65_with_hybrid(secp256k1_ge *elem, const unsigned char *pub65);
 
 /** Serialize a group element (that is not allowed to be infinity) to a compressed public key (33 bytes). */
 static void secp256k1_ge_serialize33(secp256k1_ge *elem, unsigned char *pub33);
